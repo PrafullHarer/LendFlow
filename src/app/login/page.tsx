@@ -145,8 +145,8 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-xs font-heading mt-7" style={{ color: 'var(--foreground-subtle)' }}>
-          Secured with JWT Authentication · HTTP-Only Cookies
+        <p className="text-center text-[10px] font-heading mt-7 text-black/40 font-bold uppercase tracking-[0.15em]">
+          Created by Prafull Harer <br/> Secured with JWT Authentication
         </p>
       </div>
     </div>

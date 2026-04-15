@@ -43,7 +43,7 @@ export default function Sidebar() {
           <div>
             <h1 className="font-heading font-black text-lg md:text-2xl leading-none text-[var(--foreground)] tracking-tight">LendFlow</h1>
             <p className="hidden md:block font-heading text-[10px] font-black tracking-[0.2em] uppercase mt-1 opacity-40 text-[var(--foreground)] truncate">
-              Pro Manager
+              By Prafull Harer
             </p>
           </div>
         </div>
