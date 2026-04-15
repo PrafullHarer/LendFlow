@@ -1,8 +1,14 @@
-# LendFlow — Smart Loan Manager
-
-A full-stack money lending management application built with Next.js 14, MongoDB Atlas, and Tailwind CSS. Designed for a single admin user to track loans, borrowers, and payment schedules.
-
-![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square) ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?style=flat-square) ![Tailwind](https://img.shields.io/badge/Tailwind-CSS-blue?style=flat-square) ![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=flat-square)
+<div align="center">
+  <img src="public/logo.svg" alt="LendFlow Logo" width="140" />
+  <h1>LendFlow — Smart Loan Manager</h1>
+  <p><b>A full-stack, Neubrutalist-themed loan and borrower tracking platform. Built with Next.js 14, MongoDB, and Tailwind CSS to autonomously map amortization schedules and chronological system transactions.</b></p>
+  <br/>
+  
+  ![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square) 
+  ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?style=flat-square) 
+  ![Tailwind](https://img.shields.io/badge/Tailwind-CSS-blue?style=flat-square) 
+  ![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=flat-square)
+</div>
 
 ---
 
