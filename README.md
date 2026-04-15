@@ -149,6 +149,13 @@ Open [http://localhost:3000](http://localhost:3000) and login with your admin cr
 
 ---
 
+## Author
+
+**Prafull Harer**  
+Designed and engineered as a full-stack financial tracking application utilizing modern Next.js methodologies and Neubrutalist design principles.
+
+---
+
 ## License
 
 MIT
