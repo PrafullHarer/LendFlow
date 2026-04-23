@@ -9,7 +9,7 @@
   ![Tailwind](https://img.shields.io/badge/Tailwind-CSS-blue?style=flat-square) 
   ![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=flat-square)
   <br/>
-  <p><i>Latest Update: Optimized Dashboard Aggregations & WhatsApp Reminders</i></p>
+  <p><i>Latest Update: Optimized Dashboard & WhatsApp Integration</i></p>
 </div>
 
 ---
