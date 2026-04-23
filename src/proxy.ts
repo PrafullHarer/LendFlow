@@ -48,18 +48,9 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Redirect root to dashboard
+  // Let root path render the home page
   if (pathname === '/' || pathname === '') {
-    const token = request.cookies.get('auth_token')?.value;
-    if (token) {
-      try {
-        await jwtVerify(token, JWT_SECRET);
-        return NextResponse.redirect(new URL('/dashboard', request.url));
-      } catch {
-        return NextResponse.redirect(new URL('/login', request.url));
-      }
-    }
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.next();
   }
 
   return NextResponse.next();

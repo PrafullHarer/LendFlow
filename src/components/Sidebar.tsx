@@ -2,15 +2,23 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useTheme } from './ThemeProvider';
 import {
   LayoutDashboard,
   Users,
   History,
   LogOut,
   Banknote,
+  User,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface UserSession {
+  username: string;
+  name?: string;
+  email?: string;
+  picture?: string;
+  provider?: 'credentials' | 'google';
+}
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: '#2D6B5F', mobileColor: '#FFD1BF' },
@@ -21,6 +29,18 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [user, setUser] = useState<UserSession | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated) {
+          setUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -31,6 +51,9 @@ export default function Sidebar() {
     if (href === '/dashboard') return pathname === '/dashboard';
     return pathname.startsWith(href);
   };
+
+  const displayName = user?.name || user?.username || 'Admin';
+  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <>
@@ -47,13 +70,62 @@ export default function Sidebar() {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 md:px-5 w-9 h-9 md:w-auto md:h-auto rounded-xl flex items-center justify-center border-2 border-black bg-[#EF4444] md:py-2.5 text-white shadow-[2px_2px_0px_var(--foreground)] md:shadow-[3px_3px_0px_var(--foreground)] active:translate-y-0.5 active:shadow-none transition-all"
-        >
-          <LogOut className="w-4 h-4" strokeWidth={3} />
-          <span className="hidden md:inline font-heading text-sm font-black tracking-widest uppercase">Exit System</span>
-        </button>
+
+        <div className="flex items-center gap-3">
+          {/* User Avatar / Info */}
+          {user && (
+            <Link href="/profile" className="hidden md:flex items-center gap-2.5 px-3 py-2 rounded-xl border-2 border-black bg-white shadow-[2px_2px_0px_var(--foreground)] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_var(--foreground)] transition-all cursor-pointer">
+              {user.picture ? (
+                <img
+                  src={user.picture}
+                  alt={displayName}
+                  className="w-7 h-7 rounded-lg border-[1.5px] border-black object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-lg border-[1.5px] border-black bg-[#A3E635] flex items-center justify-center">
+                  <span className="font-heading text-[10px] font-black text-black">{initials}</span>
+                </div>
+              )}
+              <div className="flex flex-col">
+                <span className="font-heading text-xs font-black text-black leading-tight truncate max-w-[120px]">
+                  {displayName}
+                </span>
+                {user.provider === 'google' && (
+                  <span className="font-heading text-[8px] font-bold text-black/40 uppercase tracking-widest">
+                    via Google
+                  </span>
+                )}
+              </div>
+            </Link>
+          )}
+
+          {/* Mobile avatar */}
+          {user && (
+            <Link href="/profile" className="flex md:hidden items-center justify-center w-9 h-9 rounded-xl border-2 border-black shadow-[2px_2px_0px_var(--foreground)] overflow-hidden cursor-pointer hover:shadow-[3px_3px_0px_var(--foreground)] hover:-translate-y-0.5 transition-all">
+              {user.picture ? (
+                <img
+                  src={user.picture}
+                  alt={displayName}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#A3E635] flex items-center justify-center">
+                  <span className="font-heading text-[10px] font-black text-black">{initials}</span>
+                </div>
+              )}
+            </Link>
+          )}
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 md:px-5 w-9 h-9 md:w-auto md:h-auto rounded-xl flex items-center justify-center border-2 border-black bg-[#EF4444] md:py-2.5 text-white shadow-[2px_2px_0px_var(--foreground)] md:shadow-[3px_3px_0px_var(--foreground)] active:translate-y-0.5 active:shadow-none transition-all"
+          >
+            <LogOut className="w-4 h-4" strokeWidth={3} />
+            <span className="hidden md:inline font-heading text-sm font-black tracking-widest uppercase">Exit System</span>
+          </button>
+        </div>
       </div>
 
       {/* Universal Bottom Navigation Dock */}

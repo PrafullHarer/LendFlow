@@ -3,11 +3,17 @@ import dbConnect from '@/lib/db';
 import Borrower from '@/models/Borrower';
 import Payment from '@/models/Payment';
 import { logAction } from '@/lib/logAction';
+import { getAuthUserId } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
-    const borrowers = await Borrower.find().sort({ createdAt: -1 }).lean();
+    const borrowers = await Borrower.find({ userId }).sort({ createdAt: -1 }).lean();
     return NextResponse.json(borrowers);
   } catch (error) {
     console.error('Borrowers fetch error:', error);
@@ -17,6 +23,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await request.json();
 
@@ -27,6 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const borrower = await Borrower.create({
+      userId,
       name: name.trim(),
       phone: phone?.trim() || '',
       principal: Number(principal),
@@ -48,6 +60,7 @@ export async function POST(request: NextRequest) {
       const amountDue = isLastMonth ? monthlyInterest + Number(principal) : monthlyInterest;
 
       payments.push({
+        userId,
         borrowerId: borrower._id,
         dueDate,
         monthNumber: i,
@@ -61,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     await Payment.insertMany(payments);
 
-    await logAction('Borrower Added', `Created profile for ${borrower.name} (Principal: ₹${borrower.principal.toLocaleString('en-IN')})`);
+    await logAction(userId, 'Borrower Added', `Created profile for ${borrower.name} (Principal: ₹${borrower.principal.toLocaleString('en-IN')})`);
 
     return NextResponse.json(borrower, { status: 201 });
   } catch (error) {

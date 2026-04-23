@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createToken } from '@/lib/auth';
+import dbConnect from '@/lib/db';
+import User from '@/models/User';
 
 const COOKIE_NAME = 'auth_token';
 const EXPIRY_DAYS = 15;
@@ -21,13 +23,30 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const token = await createToken(username);
+      // Find or create user for admin credentials
+      await dbConnect();
+      const adminEmail = `${adminUser}@lendflow.local`;
+      let user = await User.findOne({ email: adminEmail });
+      if (!user) {
+        user = await User.create({
+          email: adminEmail,
+          name: adminUser.charAt(0).toUpperCase() + adminUser.slice(1),
+          provider: 'credentials',
+        });
+      }
+
+      const token = await createToken(username, {
+        userId: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        provider: 'credentials',
+      });
+
       const response = NextResponse.json({ success: true });
       response.cookies.set(COOKIE_NAME, token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: EXPIRY_DAYS * 24 * 60 * 60,
         path: '/',
       });
       return response;
@@ -41,4 +60,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
-

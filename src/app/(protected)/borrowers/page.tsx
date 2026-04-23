@@ -16,6 +16,7 @@ import {
   UserPlus,
   Phone,
   TrendingUp,
+  Edit2,
 } from 'lucide-react';
 
 interface Borrower {
@@ -61,6 +62,8 @@ export default function BorrowersPage() {
     durationMonths: '',
     startDate: new Date().toISOString().split('T')[0],
   });
+  const [editingBorrower, setEditingBorrower] = useState<Borrower | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const fetchBorrowers = useCallback(async () => {
     try {
@@ -79,16 +82,36 @@ export default function BorrowersPage() {
   }, [fetchBorrowers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    
+    // Check if financial fields changed for an edit
+    if (editingBorrower && !showConfirmModal) {
+      const financialChanged = 
+        Number(formData.principal) !== editingBorrower.principal ||
+        Number(formData.interestRate) !== editingBorrower.interestRate ||
+        Number(formData.durationMonths) !== editingBorrower.durationMonths ||
+        formData.startDate !== new Date(editingBorrower.startDate).toISOString().split('T')[0];
+      
+      if (financialChanged) {
+        setShowConfirmModal(true);
+        return;
+      }
+    }
+
     setSubmitting(true);
+    setShowConfirmModal(false);
     try {
-      const res = await fetch('/api/borrowers', {
-        method: 'POST',
+      const url = editingBorrower ? `/api/borrowers/${editingBorrower._id}` : '/api/borrowers';
+      const method = editingBorrower ? 'PATCH' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
       if (res.ok) {
         setShowModal(false);
+        setEditingBorrower(null);
         setFormData({
           name: '', phone: '', principal: '', interestRate: '', durationMonths: '',
           startDate: new Date().toISOString().split('T')[0],
@@ -96,7 +119,7 @@ export default function BorrowersPage() {
         await fetchBorrowers();
       }
     } catch (error) {
-      console.error('Failed to create borrower:', error);
+      console.error('Failed to save borrower:', error);
     } finally {
       setSubmitting(false);
     }
@@ -137,7 +160,14 @@ export default function BorrowersPage() {
           </p>
         </div>
         <button 
-          onClick={() => setShowModal(true)} 
+          onClick={() => {
+            setEditingBorrower(null);
+            setFormData({
+              name: '', phone: '', principal: '', interestRate: '', durationMonths: '',
+              startDate: new Date().toISOString().split('T')[0],
+            });
+            setShowModal(true);
+          }} 
           className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border-2 border-black font-heading font-bold text-sm tracking-tight transition-all
             bg-[#4F46E5] text-white shadow-[4px_4px_0px_var(--foreground)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_var(--foreground)]
             active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
@@ -231,6 +261,29 @@ export default function BorrowersPage() {
                   </div>
                 </div>
 
+                {/* Edit Button Overlay */}
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEditingBorrower(borrower);
+                      setFormData({
+                        name: borrower.name,
+                        phone: borrower.phone,
+                        principal: borrower.principal.toString(),
+                        interestRate: borrower.interestRate.toString(),
+                        durationMonths: borrower.durationMonths.toString(),
+                        startDate: new Date(borrower.startDate).toISOString().split('T')[0],
+                      });
+                      setShowModal(true);
+                    }}
+                    className="p-2 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_#000] hover:bg-gray-50 active:translate-y-0.5 active:shadow-none transition-all"
+                  >
+                    <Edit2 className="w-4 h-4 text-black" />
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Principal', value: formatCurrency(borrower.principal), icon: IndianRupee },
@@ -264,18 +317,18 @@ export default function BorrowersPage() {
       {/* Add Borrower Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative w-full max-w-lg card-elevated max-h-[90vh] overflow-y-auto">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="relative w-full max-w-lg card-elevated flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="sticky top-0 z-10 px-6 py-5 flex items-center justify-between rounded-t-[1.25rem]"
-              style={{ background: 'var(--background-elevated)', borderBottom: '1px solid var(--border)' }}>
+            <div className="px-5 py-4 md:px-6 md:py-5 flex items-center justify-between shrink-0"
+              style={{ background: 'var(--background-elevated)', borderBottom: '2.5px solid var(--foreground)' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
                   style={{ background: 'var(--primary)', boxShadow: '0 4px 16px var(--shadow-primary)' }}>
-                  <UserPlus className="w-5 h-5 text-white" />
+                  {editingBorrower ? <Edit2 className="w-5 h-5 text-white" /> : <UserPlus className="w-5 h-5 text-white" />}
                 </div>
                 <h2 className="font-heading text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-                  New Borrower
+                  {editingBorrower ? 'Edit Borrower' : 'New Borrower'}
                 </h2>
               </div>
               <button onClick={() => setShowModal(false)}
@@ -285,90 +338,143 @@ export default function BorrowersPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              <div>
-                <label className="block font-heading text-sm font-medium mb-1.5" style={{ color: 'var(--foreground-muted)' }}>
-                  Borrower Name <span style={{ color: 'var(--primary)' }}>*</span>
-                </label>
-                <input type="text" required value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Full name" className="input-field" />
-              </div>
-
-              <div>
-                <label className="block font-heading text-sm font-medium mb-1.5" style={{ color: 'var(--foreground-muted)' }}>
-                  Phone (Optional)
-                </label>
-                <input type="text" value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="Phone number" className="input-field" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+              <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-4 md:space-y-5 custom-scrollbar">
                 <div>
-                  <label className="block font-heading text-sm font-medium mb-1.5" style={{ color: 'var(--foreground-muted)' }}>
-                    Principal (₹) <span style={{ color: 'var(--primary)' }}>*</span>
+                  <label className="block font-heading text-[10px] font-black mb-1.5 uppercase tracking-[0.15em] text-black/40">
+                    Borrower Name <span className="text-[#4F46E5]">*</span>
                   </label>
-                  <input type="number" required min="1" value={formData.principal}
-                    onChange={(e) => setFormData({ ...formData, principal: e.target.value })}
-                    placeholder="100000" className="input-field" />
+                  <input type="text" required value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Full name" className="input-field py-3.5 px-4" />
                 </div>
-                <div>
-                  <label className="block font-heading text-sm font-medium mb-1.5" style={{ color: 'var(--foreground-muted)' }}>
-                    Rate (%/mo) <span style={{ color: 'var(--primary)' }}>*</span>
-                  </label>
-                  <input type="number" required min="0.1" step="0.1" value={formData.interestRate}
-                    onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
-                    placeholder="2" className="input-field" />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-heading text-sm font-medium mb-1.5" style={{ color: 'var(--foreground-muted)' }}>
-                    Duration (months) <span style={{ color: 'var(--primary)' }}>*</span>
+                  <label className="block font-heading text-[10px] font-black mb-1.5 uppercase tracking-[0.15em] text-black/40">
+                    Phone (Optional)
                   </label>
-                  <input type="number" required min="1" value={formData.durationMonths}
-                    onChange={(e) => setFormData({ ...formData, durationMonths: e.target.value })}
-                    placeholder="12" className="input-field" />
+                  <input type="text" value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="Phone number" className="input-field py-3.5 px-4" />
                 </div>
-                <div>
-                  <label className="block font-heading text-sm font-medium mb-1.5" style={{ color: 'var(--foreground-muted)' }}>
-                    Start Date <span style={{ color: 'var(--primary)' }}>*</span>
-                  </label>
-                  <input type="date" required value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="input-field" />
-                </div>
-              </div>
 
-              {/* Preview */}
-              {preview && (
-                <div className="card-flat p-4 space-y-2" style={{ borderLeft: '4px solid var(--primary)' }}>
-                  <p className="font-heading text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--primary)' }}>
-                    Loan Preview
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <span className="font-heading text-xs" style={{ color: 'var(--foreground-subtle)' }}>Monthly Interest</span>
-                      <p className="font-heading font-bold" style={{ color: 'var(--foreground)' }}>{formatCurrency(preview.monthlyInterest)}</p>
-                    </div>
-                    <div>
-                      <span className="font-heading text-xs" style={{ color: 'var(--foreground-subtle)' }}>Total Repayment</span>
-                      <p className="font-heading font-bold" style={{ color: 'var(--foreground)' }}>{formatCurrency(preview.totalRepayment)}</p>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-heading text-[10px] font-black mb-1.5 uppercase tracking-[0.15em] text-black/40">
+                      Principal (₹) <span className="text-[#4F46E5]">*</span>
+                    </label>
+                    <input type="number" required min="1" value={formData.principal}
+                      onChange={(e) => setFormData({ ...formData, principal: e.target.value })}
+                      placeholder="100000" className="input-field py-3.5 px-4" />
+                  </div>
+                  <div>
+                    <label className="block font-heading text-[10px] font-black mb-1.5 uppercase tracking-[0.15em] text-black/40">
+                      Rate (%/mo) <span className="text-[#4F46E5]">*</span>
+                    </label>
+                    <input type="number" required min="0.1" step="0.1" value={formData.interestRate}
+                      onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
+                      placeholder="2" className="input-field py-3.5 px-4" />
                   </div>
                 </div>
-              )}
 
-              <button type="submit" disabled={submitting} className="btn-primary w-full justify-center py-3">
-                {submitting ? (
-                  <div className="w-5 h-5 spinner border-white/30 border-t-white" />
-                ) : (
-                  <><Plus className="w-4 h-4" /> Create Borrower & Generate Schedule</>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-heading text-[10px] font-black mb-1.5 uppercase tracking-[0.15em] text-black/40">
+                      Duration (months) <span className="text-[#4F46E5]">*</span>
+                    </label>
+                    <input type="number" required min="1" value={formData.durationMonths}
+                      onChange={(e) => setFormData({ ...formData, durationMonths: e.target.value })}
+                      placeholder="12" className="input-field py-3.5 px-4" />
+                  </div>
+                  <div>
+                    <label className="block font-heading text-[10px] font-black mb-1.5 uppercase tracking-[0.15em] text-black/40">
+                      Start Date <span className="text-[#4F46E5]">*</span>
+                    </label>
+                    <input type="date" required value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      className="input-field py-3.5 px-4" />
+                  </div>
+                </div>
+
+                {/* Preview */}
+                {preview && (
+                  <div className="bg-[#F1F1EE] border-2 border-black rounded-2xl p-4 space-y-3 shadow-[4px_4px_0px_#000]">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-[#4F46E5]" />
+                      <span className="font-heading text-[10px] font-black uppercase tracking-widest text-black/40">
+                        Loan Preview
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="font-heading text-[10px] font-bold uppercase tracking-widest text-black/30">Monthly Interest</span>
+                        <p className="font-heading font-black text-sm text-black">{formatCurrency(preview.monthlyInterest)}</p>
+                      </div>
+                      <div>
+                        <span className="font-heading text-[10px] font-bold uppercase tracking-widest text-black/30">Total Repayment</span>
+                        <p className="font-heading font-black text-sm text-[#4F46E5]">{formatCurrency(preview.totalRepayment)}</p>
+                      </div>
+                    </div>
+                  </div>
                 )}
-              </button>
+              </div>
+
+              {/* Sticky Modal Footer */}
+              <div className="p-5 md:p-6 shrink-0 bg-white" style={{ borderTop: '2.5px solid var(--foreground)' }}>
+                <button 
+                  type="submit"
+                  disabled={submitting} 
+                  className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-black font-heading font-black text-sm uppercase tracking-widest transition-all shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed
+                    ${editingBorrower ? 'bg-[#F59E0B] text-black' : 'bg-[#A3E635] text-black'}`}
+                >
+                  {submitting ? (
+                    <div className="w-5 h-5 rounded-full border-4 border-black/10 border-t-black animate-spin" />
+                  ) : (
+                    <>
+                      {editingBorrower ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      {editingBorrower ? 'Save Changes' : 'Create Borrower'}
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowConfirmModal(false)} />
+          <div className="relative w-full max-w-sm card-elevated p-8 text-center bg-white border-[3px] border-black shadow-[8px_8px_0px_#000]">
+            <div className="w-16 h-16 bg-[#FEF9C3] border-[3px] border-black rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-[4px_4px_0px_#000]">
+              <Clock className="w-8 h-8 text-[#854D0E]" />
+            </div>
+            
+            <h3 className="font-heading text-xl font-black mb-3 text-black uppercase tracking-tight">Confirm Changes?</h3>
+            
+            <div className="bg-[#FEF2F2] border-2 border-[#FECACA] rounded-xl p-4 mb-8">
+              <p className="font-body text-xs text-[#991B1B] leading-relaxed">
+                <span className="font-black">Note:</span> Changing financial details will reset the entire payment schedule for this borrower.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => handleSubmit(null as any)}
+                className="w-full py-4 bg-[#A3E635] border-[3px] border-black rounded-xl font-heading font-black text-sm uppercase tracking-widest shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+              >
+                Confirm
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="w-full py-4 bg-white border-[3px] border-black rounded-xl font-heading font-black text-sm uppercase tracking-widest hover:bg-gray-50 transition-all"
+              >
+                Go Back
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IBorrower extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   name: string;
   phone: string;
   principal: number;
@@ -13,6 +14,7 @@ export interface IBorrower extends Document {
 }
 
 const BorrowerSchema = new Schema<IBorrower>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   name: { type: String, required: true, trim: true },
   phone: { type: String, default: '', trim: true },
   principal: { type: Number, required: true, min: 0 },
@@ -22,6 +24,8 @@ const BorrowerSchema = new Schema<IBorrower>({
   status: { type: String, enum: ['active', 'closed'], default: 'active' },
   createdAt: { type: Date, default: Date.now },
 });
+
+BorrowerSchema.index({ userId: 1, status: 1 });
 
 const Borrower: Model<IBorrower> = mongoose.models.Borrower || mongoose.model<IBorrower>('Borrower', BorrowerSchema);
 

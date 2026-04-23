@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Payment from '@/models/Payment';
+import { getAuthUserId } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await dbConnect();
 
     const { searchParams } = new URL(request.url);
@@ -14,7 +20,7 @@ export async function GET(request: NextRequest) {
     const upcoming = searchParams.get('upcoming');
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const filter: any = {};
+    const filter: any = { userId };
 
     if (status && status !== 'all') {
       filter.status = status;
@@ -33,7 +39,7 @@ export async function GET(request: NextRequest) {
     // Auto-mark overdue
     const now = new Date();
     await Payment.updateMany(
-      { status: 'pending', dueDate: { $lt: now } },
+      { userId, status: 'pending', dueDate: { $lt: now } },
       { $set: { status: 'overdue' } }
     );
 

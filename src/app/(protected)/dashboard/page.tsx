@@ -13,6 +13,7 @@ import {
   IndianRupee,
   RefreshCw,
   Terminal,
+  MessageSquare,
 } from 'lucide-react';
 import SystemLogsModal from '@/components/SystemLogsModal';
 
@@ -25,11 +26,19 @@ interface DashboardData {
   activeLoans: number;
   closedLoans: number;
   upcomingPayments: UpcomingPayment[];
+  upiId?: string;
 }
 
 interface UpcomingPayment {
   _id: string;
-  borrowerId: { _id: string; name: string; phone: string } | null;
+  borrowerId: { 
+    _id: string; 
+    name: string; 
+    phone: string;
+    principal: number;
+    interestRate: number;
+    durationMonths: number;
+  } | null;
   dueDate: string;
   monthNumber: number;
   amountDue: number;
@@ -58,6 +67,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [isLogsOpen, setIsLogsOpen] = useState(false);
+  const [showUpiModal, setShowUpiModal] = useState(false);
+  const [tempUpi, setTempUpi] = useState('');
+  const [activePaymentForUpi, setActivePaymentForUpi] = useState<UpcomingPayment | null>(null);
+  const [savingUpi, setSavingUpi] = useState(false);
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -104,6 +117,61 @@ export default function DashboardPage() {
       console.error('Failed to mark as paid:', error);
     } finally {
       setMarkingPaid(null);
+    }
+  };
+
+  const handleWhatsAppReminder = (payment: UpcomingPayment) => {
+    if (!payment.borrowerId) return;
+    
+    const { name, phone, principal, interestRate, durationMonths } = payment.borrowerId;
+    const { amountDue, monthNumber, dueDate } = payment;
+    const upiId = data?.upiId || 'Not set';
+
+    const message = `*Payment Reminder from LendFlow*%0A%0AHello *${name}*,%0AThis is a reminder for your upcoming payment of *₹${amountDue.toLocaleString('en-IN')}* due on *${formatDate(dueDate)}*.%0A%0A*Loan Details:*%0A- Principal: ₹${principal.toLocaleString('en-IN')}%0A- Interest Rate: ${interestRate}%/mo%0A- Installment: ${monthNumber} of ${durationMonths}%0A%0A*Payment Method:*%0A- UPI ID: *${upiId}*%0A%0APlease make the payment at your earliest convenience. Thank you!`;
+
+    const whatsappUrl = `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleWhatsAppClick = (payment: UpcomingPayment) => {
+    if (!data?.upiId || data.upiId === '') {
+      setActivePaymentForUpi(payment);
+      setTempUpi('');
+      setShowUpiModal(true);
+    } else {
+      handleWhatsAppReminder(payment);
+    }
+  };
+
+  const saveUpiAndRemind = async () => {
+    if (!tempUpi.trim()) return;
+    setSavingUpi(true);
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ upiId: tempUpi.trim() }),
+      });
+      
+      if (res.ok) {
+        // Update local state so we don't ask again
+        setData(prev => prev ? { ...prev, upiId: tempUpi.trim() } : null);
+        setShowUpiModal(false);
+        if (activePaymentForUpi) {
+          // Send reminder after state update
+          const updatedPayment = { ...activePaymentForUpi };
+          // We manually pass the upiId here because the state update might be async
+          const { name, phone, principal, interestRate, durationMonths } = updatedPayment.borrowerId!;
+          const { amountDue, monthNumber, dueDate } = updatedPayment;
+          const message = `*Payment Reminder from LendFlow*%0A%0AHello *${name}*,%0AThis is a reminder for your upcoming payment of *₹${amountDue.toLocaleString('en-IN')}* due on *${formatDate(dueDate)}*.%0A%0A*Loan Details:*%0A- Principal: ₹${principal.toLocaleString('en-IN')}%0A- Interest Rate: ${interestRate}%/mo%0A- Installment: ${monthNumber} of ${durationMonths}%0A%0A*Payment Method:*%0A- UPI ID: *${tempUpi.trim()}*%0A%0APlease make the payment at your earliest convenience. Thank you!`;
+          const whatsappUrl = `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${message}`;
+          window.open(whatsappUrl, '_blank');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save UPI:', error);
+    } finally {
+      setSavingUpi(false);
     }
   };
 
@@ -258,33 +326,45 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-between sm:justify-end gap-5 flex-shrink-0">
-                  <div className="text-left sm:text-right">
-                    <p className="font-heading font-bold text-lg flex items-center gap-0.5 sm:justify-end" style={{ color: '#059669' }}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 flex-shrink-0">
+                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-1">
+                    <p className="font-heading font-black text-xl flex items-center gap-0.5 sm:justify-end text-[#059669]">
                       <IndianRupee className="w-4 h-4" />
                       {payment.amountDue.toLocaleString('en-IN')}
                     </p>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border-2 border-black uppercase tracking-wider block w-fit mt-1
-                      ${payment.status === 'overdue' ? 'bg-red-500 text-white' : 'bg-blue-100 text-blue-700'}`}>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black border-2 border-black uppercase tracking-widest block w-fit
+                      ${payment.status === 'overdue' ? 'bg-[#FF4D4D] text-white shadow-[2px_2px_0px_#000]' : 'bg-[#38BDF8] text-black shadow-[2px_2px_0px_#000]'}`}>
                       {payment.status === 'overdue' ? 'Overdue' : 'Pending'}
                     </span>
                   </div>
-                  <button
-                    onClick={() => handleMarkPaid(payment._id)}
-                    disabled={markingPaid === payment._id}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl border-2 border-black font-heading font-bold text-xs uppercase tracking-widest transition-all
-                      bg-[#10B981] text-white shadow-[4px_4px_0px_var(--foreground)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_var(--foreground)] 
-                      active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {markingPaid === payment._id ? (
-                      <div className="w-4 h-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Mark Paid</span>
-                      </>
-                    )}
-                  </button>
+                  
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <button
+                      onClick={() => handleWhatsAppClick(payment)}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border-2 border-black font-heading font-black text-[10px] uppercase tracking-widest transition-all
+                        bg-[#25D366] text-white shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] 
+                        active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Remind</span>
+                    </button>
+                    <button
+                      onClick={() => handleMarkPaid(payment._id)}
+                      disabled={markingPaid === payment._id}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border-2 border-black font-heading font-black text-[10px] uppercase tracking-widest transition-all
+                        bg-[#10B981] text-white shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] 
+                        active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {markingPaid === payment._id ? (
+                        <div className="w-4 h-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Mark Paid</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -296,6 +376,53 @@ export default function DashboardPage() {
         isOpen={isLogsOpen} 
         onClose={() => setIsLogsOpen(false)} 
       />
+
+      {/* UPI Setup Modal */}
+      {showUpiModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowUpiModal(false)} />
+          <div className="relative w-full max-w-sm card-elevated p-8 bg-white border-[3px] border-black shadow-[8px_8px_0px_#000] animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-[#A3E635] border-[3px] border-black rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-[4px_4px_0px_#000]">
+              <IndianRupee className="w-8 h-8 text-black" />
+            </div>
+            
+            <h3 className="font-heading text-xl font-black mb-2 text-black text-center uppercase tracking-tight">Add Your UPI ID</h3>
+            <p className="font-body text-xs text-black/50 mb-8 text-center leading-relaxed">
+              Please add your UPI ID to include it in the payment reminder message.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block font-heading text-[10px] font-black mb-2 uppercase tracking-[0.15em] text-black/40">
+                  Your UPI ID
+                </label>
+                <input 
+                  type="text" 
+                  autoFocus
+                  value={tempUpi}
+                  onChange={(e) => setTempUpi(e.target.value)}
+                  placeholder="username@bank"
+                  className="w-full px-5 py-4 bg-[#F1F1EE] border-[3px] border-black rounded-2xl font-body font-bold text-black focus:outline-none focus:ring-0 focus:border-[#A3E635] transition-colors"
+                />
+              </div>
+              
+              <button
+                onClick={saveUpiAndRemind}
+                disabled={savingUpi || !tempUpi.trim()}
+                className="w-full py-4 bg-[#A3E635] border-[3px] border-black rounded-xl font-heading font-black text-sm uppercase tracking-widest shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all disabled:opacity-50"
+              >
+                {savingUpi ? 'Saving...' : 'Save & Send Reminder'}
+              </button>
+              <button
+                onClick={() => setShowUpiModal(false)}
+                className="w-full py-4 bg-white border-[3px] border-black rounded-xl font-heading font-black text-sm uppercase tracking-widest hover:bg-gray-50 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

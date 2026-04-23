@@ -15,12 +15,15 @@
 ## Features
 
 - 🔐 **Secure Auth** — Custom JWT in HTTP-only cookies
-- 📊 **Dashboard** — Summary cards, upcoming payments, quick mark-as-paid
-- 👥 **Borrower Management** — Add, view, delete borrowers with auto-generated payment schedules
+- 📊 **Dashboard** — Summary cards, upcoming payments, quick mark-as-paid, and log tracking
+- 👥 **Borrower Management** — Add, edit, and view borrowers. Financial changes automatically regenerate schedules with a safety confirmation flow.
+- 💬 **WhatsApp Reminders** — One-click automated reminders with loan details, due amount, and UPI ID sent directly to borrowers.
+- 💳 **Smart UPI Integration** — Dedicated profile settings for UPI ID with intelligent dashboard popups for easy setup.
 - 📅 **Payment Schedule** — Track interest-only and final (interest + principal) payments
 - 📜 **History** — Full payment history with filters (status, date range, search)
 - 🗃️ **System Activity Logs** — Advanced timeline tracking all creations, updates, and loan closures
-- 🎨 **Neubrutalist UI** — Fully responsive, high-contrast, border-heavy aesthetic (Mobile & Desktop dock navigation)
+- 🎨 **Neubrutalist UI** — High-contrast, border-heavy aesthetic with full mobile responsiveness and sticky modals.
+- ⚡ **Performance Optimized** — MongoDB Aggregation pipelines and parallel data fetching for snappy response times.
 - 🚀 **Vercel Ready** — Deploy in one click
 
 ---
@@ -134,6 +137,14 @@ Open [http://localhost:3000](http://localhost:3000) and login with your admin cr
 | type | Enum | 'interest' or 'final' |
 | status | Enum | 'pending', 'paid', or 'overdue' |
 
+### User
+| Field | Type | Description |
+|-------|------|-------------|
+| email | String | Unique email address |
+| name | String | User's display name |
+| upiId | String | UPI ID for payment reminders |
+| provider | Enum | 'credentials' or 'google' |
+
 ### Log
 | Field | Type | Description |
 |-------|------|-------------|
@@ -148,10 +159,11 @@ Open [http://localhost:3000](http://localhost:3000) and login with your admin cr
 | Route | Description |
 |-------|-------------|
 | `/login` | High-contrast login portal |
-| `/dashboard` | System overview, logs modal, and upcoming payments |
-| `/borrowers` | List all borrowers with add new |
-| `/borrowers/[id]` | Borrower detail with dynamic timeline |
-| `/history` | Full payment history and transaction filters |
+| `/dashboard` | System overview, logs modal, and smart upcoming payments |
+| `/borrowers` | Manage borrowers (Add/Edit/Search) |
+| `/borrowers/[id]` | Detailed loan timeline and payment tracking |
+| `/history` | Global transaction logs and filters |
+| `/profile` | User settings and payment (UPI) configuration |
 
 ---
 
