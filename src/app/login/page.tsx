@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, ArrowRight, Shield } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Shield, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 function LoginForm() {
   const [username, setUsername] = useState('');
@@ -182,6 +183,14 @@ export default function LoginPage() {
       {/* Login Card */}
       <div className="relative z-10 w-full max-w-md mx-4">
 
+        {/* Back Link */}
+        <Link 
+          href="/" 
+          className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-xl border-2 border-black bg-white font-heading text-[10px] font-black uppercase tracking-widest shadow-[4px_4px_0px_#000] transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+        >
+          <ArrowLeft className="w-4 h-4" strokeWidth={3} />
+          Back Home
+        </Link>
 
         {/* Card */}
         <div className="bg-white border-[3px] border-black rounded-3xl p-8 shadow-[8px_8px_0px_#000]">
